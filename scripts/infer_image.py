@@ -73,7 +73,7 @@ def class_name(class_id: int) -> str:
     return str(class_id)
 
 
-def detections_from_result(result: Any, inference_time_ms: float) -> list[dict[str, Any]]:
+def detections_from_result(result: Any) -> list[dict[str, Any]]:
     if result.boxes is None or len(result.boxes) == 0:
         return []
 
@@ -88,9 +88,8 @@ def detections_from_result(result: Any, inference_time_ms: float) -> list[dict[s
             {
                 "class_id": int(class_id),
                 "class_name": class_name(int(class_id)),
-                "confidence": float(conf),
-                "bbox_xyxy": [float(value) for value in box],
-                "inference_time_ms": inference_time_ms,
+                "confidence": round(float(conf), 4),
+                "bbox_xyxy": [round(float(value), 4) for value in box],
             }
         )
     return detections
@@ -132,16 +131,16 @@ def write_json(
     args: argparse.Namespace,
 ) -> None:
     payload = {
-        "source": str(source),
-        "weights": str(weights),
-        "visualization": str(output_image),
+        "source_name": source.name,
+        "weights_name": weights.name,
+        "visualization_name": output_image.name,
         "class_names": list(CLASS_NAMES),
         "parameters": {
             "conf": args.conf,
             "iou": args.iou,
             "imgsz": args.imgsz,
         },
-        "inference_time_ms": inference_time_ms,
+        "inference_time_ms": round(inference_time_ms, 2),
         "boxes": detections,
     }
     output_json.parent.mkdir(parents=True, exist_ok=True)
@@ -172,7 +171,7 @@ def main() -> None:
     if not results:
         raise RuntimeError("YOLO returned no result object.")
 
-    detections = detections_from_result(results[0], inference_time_ms)
+    detections = detections_from_result(results[0])
     stem = source.stem
     output_image = output_dir / f"{stem}_pred.jpg"
     output_json = output_dir / f"{stem}_result.json"
